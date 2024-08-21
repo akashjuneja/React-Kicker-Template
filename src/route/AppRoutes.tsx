@@ -8,42 +8,37 @@ import { PrivateRoutes } from "./PrivateRoutes";
 import { ProtectedRoutes } from "./ProtectedRoutes";
 import { PublicRoutes } from "./PublicRoutes";
 import Home from "../features/home/Home";
+import UnauthorizedPage from "../features/unauth/unAuthorized";
 
 const router = createBrowserRouter([
-    {
-        path:"",
-        element:<PublicRoutes/>,
-        children:[
-            {path:"",element:<LandingPage/>},
-            {
-                path: '/login',
-                element: <Login />
-            },
-        ]
-    },  
-    {
-        path: '/home',
-        element: <PrivateRoutes />,
+  {
+    path: "",
+    element: <PublicRoutes />,
+    children: [
+      { path: "", element: <LandingPage /> },
+      { path: "/login", element: <Login /> },
+    ],
+  },
+  {
+    path: "/home",
+    element: <PrivateRoutes />,
+    children: [
+      {
+        path: "",
+        element: <Home />,
         children: [
-            {path:"",element:<Home/>,children:[
-                {
-                    path:'',
-                    element:<Main/>
-                },
-                {
-                    path: 'products',
-                    element: <Products />
-                },{
-                    path:'users',
-                    element:<Users/>
-                },{
-                    path:'dashboard',
-                    element:<ProtectedRoutes role="admin"/>
-                }
-            ]},
-            
-        ]
-    }
+          { path: "", element: <Main /> },
+          { path: "products", element: <Products /> },
+          { path: "users", element: <Users /> },
+          { path: "dashboard", element: <ProtectedRoutes role="admin" /> },
+        ],
+      },
+    ],
+  },
+  {
+    path: "/unauth", // Add the unauthorized route
+    element: <UnauthorizedPage />,
+  },
 ]);
 
 const AppRouter: React.FC = () => <RouterProvider router={router} />;

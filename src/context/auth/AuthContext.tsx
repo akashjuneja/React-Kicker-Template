@@ -1,52 +1,82 @@
-// AuthContext.tsx
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+} from "react";
+import { jwtDecode, JwtPayload } from "jwt-decode";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: string;
-  login: (data:boolean) => void;
+  login: (token: string) => void;
   logout: () => void;
-  initializeAuth: () => void;
-  setIsAuthenticated:React.Dispatch<React.SetStateAction<boolean>>
-
+  validateToken: () => boolean; // Function to validate token
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState('');
+  const [userRole, setUserRole] = useState("");
 
-  const login = (data:boolean) => {
-    setIsAuthenticated(data);
+  const login = (token: string) => {
+    // Store the token in localStorage
+    localStorage.setItem("token", token);
+    validateToken(); // Validate the token and set the auth state
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    setUserRole('');
-    localStorage.removeItem('token');
+    setUserRole("");
+    localStorage.removeItem("token");
   };
 
-  const initializeAuth = () => {
-    const token = localStorage.getItem('token');
+  const validateToken = (): boolean => {
+    const token = localStorage.getItem("token");
     if (token) {
       try {
-        const [, payload] = token.split('.');
-        const decodedPayload = JSON.parse(atob(payload));
-        setIsAuthenticated(true);
-        setUserRole(decodedPayload.role);
+        const decodedToken: JwtPayload & { role?: string } = jwtDecode(token);
+
+        // Check if the token has expired
+        if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
+          logout(); // Token is expired
+          setIsAuthenticated(false);
+
+          return false;
+        } else {
+          setIsAuthenticated(true);
+          setUserRole(decodedToken.role || "");
+          return true;
+        }
       } catch (error) {
-        console.error('Failed to parse token', error);
+        console.error("Failed to decode token", error);
+        logout();
+        return false;
       }
+    } else {
+      setIsAuthenticated(false);
+      return false;
     }
   };
 
   useEffect(() => {
-    initializeAuth();
+    validateToken(); // Validate on app load
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, login, logout, initializeAuth,setIsAuthenticated }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        userRole,
+        login,
+        logout,
+        validateToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -55,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

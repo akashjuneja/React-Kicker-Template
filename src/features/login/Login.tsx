@@ -1,72 +1,81 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth/AuthContext";
 
-const createMockJwtToken = (user: { name: string, role: string }) => {
-  // Create a simple base64 encoded payload
-  const header = {
-    alg: "HS256",
-    typ: "JWT"
-  };
-
-  const payload = {
-    name: user.name,
-    role: user.role,
-    iat: Math.floor(Date.now() / 1000) // issued at time
-  };
-
-  // Convert to JSON string and then to base64
-  const encodeBase64 = (obj: object) => btoa(JSON.stringify(obj));
-  const token = `${encodeBase64(header)}.${encodeBase64(payload)}.signature`;
-
-  return token;
-};
 const Login: React.FC = () => {
-  const {setIsAuthenticated}=useAuth()
-  const [login, setLogin] = React.useState({
-    email: '',
-    password: ''
+  const { login } = useAuth();
+  const [loginS, setLogin] = React.useState({
+    email: "",
+    password: "",
   });
+  const [error, setError] = React.useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.name;
     const value = e.target.value;
     setLogin({
-      ...login,
-      [name]: value
+      ...loginS,
+      [name]: value,
     });
-    
   };
 
-  const handleSubmit=()=>{
-    // this is if i am successfluy authenticated , 
-    const user = { name: login.email, role: "user" };
-    const mockJwtToken = createMockJwtToken(user);
-    setIsAuthenticated(true)
-    localStorage.setItem("token", mockJwtToken);
-    
-   
-  }
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("https://dummyjson.com/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: loginS.email, // assuming the API expects `username`
+          password: loginS.password,
+          expiresInMins: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+
+      const data = await response.json();
+      const { token } = data;
+      login(token);
+      localStorage.setItem("token", token);
+    } catch (error) {
+      setError("Login failed. Please check your credentials.");
+      console.error((error as Error).message);
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '30vh', gap: '10px', border: '1px solid black', padding: '10px', margin: '10px auto' }}>
-      <input 
-        type="email" 
-        name="email" 
-        placeholder="Enter email" 
-        value={login.email} 
-        onChange={handleChange} 
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "30vh",
+        gap: "10px",
+        border: "1px solid black",
+        padding: "10px",
+        margin: "10px auto",
+      }}
+    >
+      <input
+        type="email"
+        name="email"
+        placeholder="Enter email"
+        value={loginS.email}
+        onChange={handleChange}
       />
-      <input 
-        type="password" 
-        name="password" 
-        placeholder="Enter password" 
-        value={login.password} 
-        onChange={handleChange} 
+      <input
+        type="password"
+        name="password"
+        placeholder="Enter password"
+        value={loginS.password}
+        onChange={handleChange}
       />
-      <button onClick={handleSubmit}>Login</button> 
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      <button onClick={handleSubmit}>Login</button>
     </div>
   );
-}
+};
 
 export default Login;
